@@ -1,0 +1,42 @@
+name: Test PATHS_FROM with empty file
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Ensure RUNNER_TEMP is set (act may not set it)
+      - name: Ensure RUNNER_TEMP is set
+        run: |
+          if [ -z "$RUNNER_TEMP" ]; then
+            echo "RUNNER_TEMP=/tmp/runner-temp" >> "$GITHUB_ENV"
+            mkdir -p /tmp/runner-temp
+          fi
+
+      # Create an empty paths file
+      - name: Create empty paths file
+        run: |
+          touch /tmp/empty-paths.txt
+
+      # When PATHS_FROM points to an empty file, the action should exit 0
+      # with "PATHS is empty. nothing to do. exiting"
+      - id: action
+        uses: .
+        env:
+          DISTRIBUTION: "EXXXXXXXXXXXXX"
+          PATHS_FROM: "/tmp/empty-paths.txt"
+          AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"
+          AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+          AWS_REGION: "us-east-1"
+
+      - name: Assert action succeeded (nothing to do)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" != "success" ]; then
+            echo "FAIL: expected action to succeed (exit 0) when PATHS_FROM file is empty"
+            exit 1
+          fi
+          echo "PASS: action correctly exited 0 when PATHS_FROM file is empty"
