@@ -1,0 +1,92 @@
+name: "Test Suite"
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run tests on"
+        required: false
+        default: "test"
+
+jobs:
+  tests:
+    name: "Test ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-18.04, windows-latest, macos-latest]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+        with:
+          ref: "${{ inputs.branch }}"
+
+      - name: print versions
+        shell: bash
+        run: |
+          uname
+          uname -a
+          aws --version
+          jq --version
+          jq --help
+
+      - name: invalidate PATHS
+        uses: ./
+        env:
+          DEBUG: "1"
+          PATHS: /robots* /index.html
+          DISTRIBUTION: ${{ secrets.DISTRIBUTION }}
+          AWS_REGION: "us-east-1"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: create path files
+        shell: bash
+        run: |
+          cat << EOF > paths1.txt
+          /robots.txt
+          /*.xml
+          EOF
+
+          cat << EOF > paths2.txt
+          /robots.txt /*.xml
+          EOF
+
+      - name: invalidate PATHS_FROM 1
+        uses: ./
+        env:
+          DEBUG: "1"
+          PATHS_FROM: paths1.txt
+          DISTRIBUTION: ${{ secrets.DISTRIBUTION }}
+          AWS_REGION: "us-east-1"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: invalidate PATHS_FROM 2
+        uses: ./
+        env:
+          DEBUG: "1"
+          PATHS_FROM: paths2.txt
+          DISTRIBUTION: ${{ secrets.DISTRIBUTION }}
+          AWS_REGION: "us-east-1"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: TestSessionName
+          aws-region: "us-east-1"
+
+      - name: invalidate PATHS using oidc creds
+        uses: ./
+        env:
+          DEBUG: "1"
+          PATHS: /robots* /index.html
+          DISTRIBUTION: ${{ secrets.DISTRIBUTION }}

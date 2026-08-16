@@ -1,0 +1,42 @@
+name: Test PATHS_FROM with empty file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install jq 1.6 and set up environment
+        run: |
+          # Install jq 1.6 so the action does not need to download it
+          sudo wget -nv -O /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+          sudo chmod 755 /usr/local/bin/jq
+          jq --version
+          # Create an empty PATHS_FROM file
+          touch /tmp/empty-paths.txt
+          echo "Created empty paths file at /tmp/empty-paths.txt"
+
+      - name: Run action with PATHS_FROM pointing to an empty file
+        id: action
+        uses: .
+        env:
+          DISTRIBUTION: EXXXXXXXXXXXXXXX
+          PATHS_FROM: /tmp/empty-paths.txt
+          AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+          AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+          AWS_REGION: us-east-1
+          # Setting AWS_SESSION_TOKEN skips the 'aws configure' step in the action,
+          # avoiding the need for a real AWS CLI installation just to configure credentials.
+          AWS_SESSION_TOKEN: fake-session-token
+
+      - name: Assert action succeeded (empty paths, nothing to do)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed (exit 0) when PATHS_FROM file is empty, but got: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly exited 0 when PATHS_FROM file is empty"
