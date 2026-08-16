@@ -1,0 +1,34 @@
+name: Test PATHS_FROM with empty file exits gracefully
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create an empty paths file
+        run: |
+          touch /tmp/empty-paths.txt
+
+      - name: Run action with PATHS_FROM pointing to an empty file
+        id: action
+        uses: .
+        env:
+          DISTRIBUTION: EXXXXXXXXXXXXXXX
+          PATHS_FROM: /tmp/empty-paths.txt
+          AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+          AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+          AWS_REGION: us-east-1
+        # The action should exit 0 with "PATHS is empty. nothing to do. exiting"
+
+      - name: Assert action succeeded (graceful exit when file is empty)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to exit 0 when PATHS_FROM file is empty, got: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly exited gracefully when PATHS_FROM file is empty"
