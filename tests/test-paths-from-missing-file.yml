@@ -1,0 +1,35 @@
+name: Test PATHS_FROM with missing file exits gracefully
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install fake CLIs
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-aws.sh" /tmp/fake-bin/aws
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-jq.sh" /tmp/fake-bin/jq
+          chmod +x /tmp/fake-bin/aws /tmp/fake-bin/jq
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - name: Run action with PATHS_FROM pointing to nonexistent file
+        id: action
+        uses: .
+        env:
+          DISTRIBUTION: FAKE_DISTRIBUTION_ID
+          PATHS_FROM: /tmp/nonexistent-paths-file.txt
+          AWS_ACCESS_KEY_ID: FAKE_KEY_ID
+          AWS_SECRET_ACCESS_KEY: FAKE_SECRET_KEY
+          AWS_REGION: us-east-1
+
+      - name: Assert action succeeded (graceful exit when paths file missing)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" != "success" ]; then
+            echo "FAIL: expected action to exit 0 when PATHS_FROM file does not exist"
+            exit 1
+          fi
+          echo "PASS: action correctly exited gracefully when PATHS_FROM file is missing"
