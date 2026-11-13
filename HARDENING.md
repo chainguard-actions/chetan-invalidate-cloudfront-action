@@ -4,7 +4,7 @@
 
 > This file was generated automatically by the hardening agent.
 
-**Policy SHA:** `d636be7e43ef829af6e853da6b3c7566db9f72fe`
+**Policy SHA:** `374911c4be584df24e6da57af2d990570ef0f859`
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
@@ -14,38 +14,39 @@ Action **chetan--invalidate-cloudfront-action/v2.4.2** was hardened automaticall
 
 ## Findings Fixed
 
-### unpinned-uses (severity: high)
+### prior-fix (severity: high)
 
-Workflow files contain `uses:` references pinned to mutable version tags instead of immutable 40-character commit SHAs. This exposes the workflow to supply-chain attacks if the referenced action tag is moved or overwritten.
+Carried forward from this version's previous harden, which fixed it; fix it again unless the code no longer has the problem. The previous harden changed action.yml without recording a finding for it, and this analysis reported nothing there. Re-apply its security changes unless the code no longer needs them. The previous patch:
+```diff
+diff --git a/action.yml b/action.yml
+index 981efd3..e5aeee5 100644
+--- a/action.yml
++++ b/action.yml
+@@ -4,10 +4,26 @@ author: "Pixelcop Research, Inc."
+ branding:
+   icon: "cloud-lightning"
+   color: "orange"
+-
+ runs:
+   using: "composite"
+   steps:
+     - shell: bash
+       run: |
+         $GITHUB_ACTION_PATH/entrypoint.sh
 
-Failing references in .github/workflows/on_push_test.yml:
-- `uses: actions/checkout@v2` (active step in the `experiment` job)
-
-Failing references in .github/workflows/tests.yml:
-- `uses: actions/checkout@v5`
-- `uses: aws-actions/configure-aws-credentials@v6` (appears twice)
-
-All should be pinned to full 40-character hex commit SHAs, e.g. `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v5`.
+```
 
 Locations:
 
-- `.github/workflows/on_push_test.yml:109`
-- `.github/workflows/tests.yml:24`
-- `.github/workflows/tests.yml:79`
-- `.github/workflows/tests.yml:91`
+- `action.yml`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses
+**Fixes applied:** prior-fix
 
 **Notes:**
 
-Pinned all four unpinned `uses:` references to full 40-character commit SHAs:
-- `.github/workflows/on_push_test.yml` line 109: `actions/checkout@v2` → `@0717577d45739eb3c851188b29f50ed6c0b2194e # v2`
-- `.github/workflows/tests.yml` line 24: `actions/checkout@v5` → `@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5`
-- `.github/workflows/tests.yml` lines 79 & 91: `aws-actions/configure-aws-credentials@v6` → `@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6` (both occurrences)
-
-Remaining `@v` references in on_push_test.yml are all inside commented-out blocks and are not active steps.
+The previous harden's patch made no security change: all it did was delete one blank line in action.yml. I re-applied that deletion. I also put quotes around "$GITHUB_ACTION_PATH/entrypoint.sh" so the path still works if it contains spaces or other characters the shell would split on. action.yml has no ${{ }} expressions, no `uses:` references and no credentials, so there was nothing else to fix there. I read entrypoint.sh but left it alone, since the finding only covered action.yml. One thing I noticed: it downloads jq from GitHub releases with wget and runs it without checking a checksum. It does not pipe a script straight into a shell.
 
