@@ -26,4 +26,4 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - shell: bash
       run: |
-        $GITHUB_ACTION_PATH/entrypoint.sh
+        "$GITHUB_ACTION_PATH/entrypoint.sh"
